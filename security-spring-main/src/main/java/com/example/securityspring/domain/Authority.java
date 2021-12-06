@@ -3,10 +3,7 @@ package com.example.securityspring.domain;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
+import javax.persistence.*;
 
 @Getter
 @Entity
@@ -14,10 +11,16 @@ import javax.persistence.Id;
 public class Authority {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
-    private Integer seq;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private int seq;
 
+    @Column(name="member_email")
     private String email;
 
     private String authority;
+
+    public Authority(String email, String authority){
+        this.email = email;
+        this.authority = authority;
+    }
 }

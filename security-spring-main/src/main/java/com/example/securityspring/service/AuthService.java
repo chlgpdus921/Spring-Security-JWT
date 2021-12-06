@@ -5,18 +5,19 @@ import com.example.securityspring.domain.Member;
 import com.example.securityspring.dto.JwtRequestDto;
 import com.example.securityspring.dto.JwtResponseDto;
 import com.example.securityspring.dto.MemberSignupRequestDto;
-import com.example.securityspring.repository.AuthorityRepository;
 import com.example.securityspring.repository.MemberRepository;
-import com.example.securityspring.security.JwtTokenProvider;
+import com.example.securityspring.security.JwtProviderManager;
 import com.example.securityspring.security.UserDetailsImpl;
 import lombok.AllArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Collection;
+import java.util.List;
 
 @Service
 @Transactional
@@ -24,11 +25,10 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthService {
 
     private final MemberRepository memberRepository;
-    private final AuthorityRepository authorityRepository;
     private final PasswordEncoder passwordEncoder;
 
     private final AuthenticationManager authenticationManager;
-    private final JwtTokenProvider jwtTokenProvider;
+    private final JwtProviderManager jwtProviderManager;
 
     public JwtResponseDto login(JwtRequestDto request) throws Exception {
         Authentication authentication = authenticationManager.authenticate(
@@ -39,11 +39,11 @@ public class AuthService {
 
     private JwtResponseDto createJwtToken(Authentication authentication) {
         UserDetailsImpl principal = (UserDetailsImpl) authentication.getPrincipal();
-        String token = jwtTokenProvider.generateToken(principal);
+        String token = jwtProviderManager.generateToken(principal);
         return new JwtResponseDto(token);
     }
 
-    public String signup(MemberSignupRequestDto request) {
+    public Collection<Authority> signup(MemberSignupRequestDto request) {
         boolean existMember = memberRepository.existsById(request.getEmail());
 
         if (existMember) return null;
@@ -51,9 +51,12 @@ public class AuthService {
         Member member = new Member(request);
         member.encryptPassword(passwordEncoder);
 
-     //   Authority authority = new Authority()
-      //  authorityRepository.save()
+        List<String> authorityGroupList = request.getAuthorityGroupList();
+        for( String authorityGroup: authorityGroupList){
+            member.addAuthorityGroupList(new Authority(request.getEmail(), authorityGroup));
+        }
+
         memberRepository.save(member);
-        return member.getEmail();
+        return member.getAuthorities();
     }
 }

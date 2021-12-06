@@ -1,7 +1,6 @@
 package com.example.securityspring.security;
 
 import com.example.securityspring.domain.Member;
-import com.example.securityspring.model.Role;
 import lombok.AllArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -17,10 +16,13 @@ public class UserDetailsImpl implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        Role role = member.getRole();
-        SimpleGrantedAuthority authority = new SimpleGrantedAuthority(ROLE_PREFIX + member.getAuthorityGroup());
-        Collection<GrantedAuthority> authorities = new ArrayList<>(); //List인 이유 : 여러개의 권한을 가질 수 있다
-        authorities.add(authority);
+        Collection<String> authorityGroupList = member.getAuthorityGroupList();
+
+        Collection<GrantedAuthority> authorities = new ArrayList<>();
+        for(String authority : authorityGroupList){
+            SimpleGrantedAuthority grantedAuthority = new SimpleGrantedAuthority(ROLE_PREFIX + authority.toUpperCase());
+            authorities.add(grantedAuthority);
+        }
 
         return authorities;
     }
@@ -55,11 +57,7 @@ public class UserDetailsImpl implements UserDetails {
         return true;
     }
 
-    public String getName() {
-        return member.getName();
-    }
-
-    public String getAuthorityGroup() {
-        return member.getAuthorityGroup();
+    public Collection<String> getAuthorityGroupList() {
+      return member.getAuthorityGroupList();
     }
 }
