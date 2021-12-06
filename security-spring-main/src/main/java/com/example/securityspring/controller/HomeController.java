@@ -25,4 +25,9 @@ public class HomeController {
     public String approve() {
         return "approve";
     }
+
+    @GetMapping("user")
+    public String user() {
+        return "user";
+    }
 }

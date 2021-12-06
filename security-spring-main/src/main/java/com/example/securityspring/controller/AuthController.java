@@ -1,5 +1,6 @@
 package com.example.securityspring.controller;
 
+import com.example.securityspring.domain.Authority;
 import com.example.securityspring.dto.JwtRequestDto;
 import com.example.securityspring.dto.JwtResponseDto;
 import com.example.securityspring.dto.MemberSignupRequestDto;
@@ -10,6 +11,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Collection;
+import java.util.List;
 
 @RestController
 @RequestMapping("/auth")
@@ -29,7 +33,7 @@ public class AuthController {
     }
 
     @PostMapping(value = "signup", produces = MediaType.APPLICATION_JSON_VALUE)
-    public String signup(@RequestBody MemberSignupRequestDto request) {
+    public Collection<Authority> signup(@RequestBody MemberSignupRequestDto request) {
         return authService.signup(request);
     }
 }

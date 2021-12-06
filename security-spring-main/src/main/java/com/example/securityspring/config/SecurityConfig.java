@@ -1,7 +1,8 @@
 package com.example.securityspring.config;
 
+import com.example.securityspring.model.Role;
 import com.example.securityspring.security.JwtAuthenticationFilter;
-import com.example.securityspring.security.JwtTokenProvider;
+import com.example.securityspring.security.JwtProviderManager;
 import lombok.AllArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -17,7 +18,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Configuration
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
-    private final JwtTokenProvider jwtTokenProvider;
+    private final JwtProviderManager jwtProviderManager;
 
     @Bean
     public BCryptPasswordEncoder encodePassword() {  // 회원가입 시 비밀번호 암호화에 사용할 Encoder 빈 등록
@@ -54,8 +55,9 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 // login 없이 접근 허용 하는 url
                 .antMatchers("/auth/**").permitAll()
                 // '/admin'의 경우 ADMIN 권한이 있는 사용자만 접근이 가능
-                .antMatchers("/admin").hasRole("admin")
-                .antMatchers("/approve").hasRole("approve")
+                .antMatchers("/admin").hasRole(Role.ADMIN.toString())
+                .antMatchers("/approve").hasRole(Role.APPROVER.toString())
+                .antMatchers("/user").hasRole(Role.USER.toString())
                 // 그 외 모든 요청은 인증과정 필요
                 .anyRequest().authenticated()
                 .and()
@@ -64,7 +66,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 .and()
                 // JwtAuthenticationFilter 는 UsernamePasswordAuthenticationFilter 전에 넣음
-                .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(new JwtAuthenticationFilter(jwtProviderManager), UsernamePasswordAuthenticationFilter.class);
     }
 
     @Override

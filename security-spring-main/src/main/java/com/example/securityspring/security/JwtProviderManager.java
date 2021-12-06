@@ -1,12 +1,12 @@
 package com.example.securityspring.security;
 
-import com.example.securityspring.model.Role;
+import com.example.securityspring.property.JwtProperties;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import lombok.RequiredArgsConstructor;
-import lombok.val;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -23,36 +23,31 @@ import java.util.Map;
 
 @RequiredArgsConstructor
 @Component
-public class JwtTokenProvider {
+public class JwtProviderManager {
 
-    @Value("${jwt.secret}")
-    private String secretKey;
-
-    // 토큰 유효시간 30분
-    @Value("${jwt.access-expired}")
-    private long tokenValidTime;
+    @Autowired
+    JwtProperties jwtProperties;
 
     private final UserDetailsServiceImpl userDetailsService;
+
+    private static final String CLAIM_ID = "id";
+    private static final String CLAIM_AUTH = "auth";
+    private static final String ISSUER = "SYSTEM";
+    private static final String AUDIENCE = "SYSTEM2";
+    private static final String BLANK = "";
+
 
     // 객체 초기화, secretKey를 Base64로 인코딩
     @PostConstruct
     protected void init() {
-        secretKey = Base64.getEncoder().encodeToString(secretKey.getBytes());
+        jwtProperties.setSecretKey(Base64.getEncoder().encodeToString(jwtProperties.getSecretKey().getBytes()));
     }
 
     public String generateToken(UserDetailsImpl userDetails) {
 
         Map<String, Object> claims = new HashMap<>();
-        claims.put("auth", userDetails.getAuthorityGroup());
-        val isAdmin = userDetails.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_"+ Role.ADMIN));
-        if (isAdmin) {
-            claims.put("role","admin");
-        } else {
-            claims.put("role","user");
-        }
-
-        val myName = userDetails.getName();
-        claims.put("myName", myName);
+        claims.put(CLAIM_ID, userDetails.getUsername());
+        claims.put(CLAIM_AUTH, userDetails.getAuthorityGroupList());
 
         return doGenerateToken(claims, userDetails.getUsername());
     }
@@ -61,22 +56,23 @@ public class JwtTokenProvider {
         return Jwts.builder()
                 .setHeaderParam("typ","JWT")
                 .setClaims(claims)
-                .setSubject(subject)
+                .setIssuer(ISSUER)
+                .setAudience(AUDIENCE)
                 .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + tokenValidTime * 1000))
-                .signWith(SignatureAlgorithm.HS256, secretKey)
+                .setExpiration(new Date(System.currentTimeMillis() + jwtProperties.getAccessExpired() * 1000))
+                .signWith(SignatureAlgorithm.HS256, jwtProperties.getSecretKey())
                 .compact();
     }
 
     // JWT 토큰에서 인증 정보 조회
     public Authentication getAuthentication(String token) {
         UserDetails userDetails = userDetailsService.loadUserByUsername(this.getUserPk(token));
-        return new UsernamePasswordAuthenticationToken(userDetails, "", userDetails.getAuthorities());
+        return new UsernamePasswordAuthenticationToken(userDetails, BLANK, userDetails.getAuthorities());
     }
 
     // 토큰에서 회원 정보 추출
     public String getUserPk(String token) {
-        return Jwts.parser().setSigningKey(secretKey).parseClaimsJws(token).getBody().getSubject();
+        return Jwts.parser().setSigningKey(jwtProperties.getSecretKey()).parseClaimsJws(token).getBody().get(CLAIM_ID, String.class);
     }
 
     // Request의 Header에서 token 값을 가져옴.
@@ -87,7 +83,7 @@ public class JwtTokenProvider {
     // 토큰의 유효성 + 만료일자 확인
     public boolean validateToken(String jwtToken) {
         try {
-            Jws<Claims> claims = Jwts.parser().setSigningKey(secretKey).parseClaimsJws(jwtToken);
+            Jws<Claims> claims = Jwts.parser().setSigningKey(jwtProperties.getSecretKey()).parseClaimsJws(jwtToken);
             return !claims.getBody().getExpiration().before(new Date());
         } catch (Exception e) {
             return false;
